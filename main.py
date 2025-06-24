@@ -1,6 +1,7 @@
 import os
 import json
 import datetime
+import pycountry
 import re
 import requests
 from dotenv import load_dotenv
@@ -13,11 +14,16 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langgraph.graph import StateGraph, END
 from typing import TypedDict, Annotated, Sequence
 from operator import add as add_messages
+from firecrawl import FirecrawlApp
 
+from chromaDB import url_retriever
 
 load_dotenv()
 
 llm = ChatOpenAI(model="gpt-4o", temperature=0.0)
+
+api_key = os.getenv("FIRECRAWL_API_KEY")
+app = FirecrawlApp(api_key=api_key)
 
 def extract_country(text: str) -> str:
     text_lower = text.lower()
@@ -65,8 +71,9 @@ def visa_required(query: str) -> str:
         return "Sorry, I couldn't identify your nationality country from the query."
 
     url = f"https://www.passportindex.org/passport/{nationality.lower()}/"
+    content = app.scrape_url(url)
 
-    return nationality
+    return {"content": content, "url": url}
 
 @tool
 def visa_application_link(query: str) -> str:
